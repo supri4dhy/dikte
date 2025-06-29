@@ -15,10 +15,11 @@
     
     <style>
         /* CSS Kustom untuk efek dan font */
-        body {
+        html, body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
-            overflow: hidden; /* Mencegah scroll saat drag */
+            overflow: hidden; /* Mencegah scroll pada level HTML dan Body */
+            height: 100%;
         }
 
         h1, h2, h3 {
@@ -38,28 +39,42 @@
             filter: brightness(0.95);
         }
         
-        /* Gaya untuk kartu huruf yang bisa di-drag */
+        /* Gaya untuk kartu huruf */
         .letter-card {
-            touch-action: none; /* Mencegah scrolling saat drag di mobile */
-            user-select: none; /* Mencegah seleksi teks saat drag */
+            touch-action: none; 
+            user-select: none;
             background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
             border-color: #f76d72;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
         }
+
+        /* Gaya untuk kartu yang dipilih, baik di atas maupun di bawah */
+        .letter-card.selected {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border-color: #fff;
+        }
+
+        /* Gaya untuk kartu saat animasi terbang */
+        .flying-card {
+            transition: left 0.4s ease-in-out, top 0.4s ease-in-out;
+            pointer-events: none; /* Agar tidak bisa diklik saat terbang */
+        }
+
 
         /* Gaya untuk slot jawaban */
         .answer-slot {
             background-color: rgba(255, 255, 255, 0.5);
             border: 3px dashed #66a6ff;
+            cursor: pointer;
         }
 
-        /* Gaya saat huruf yang benar ditaruh di slot */
         .answer-slot.filled {
-            border-style: solid;
-            background-color: #a7f3d0; /* Hijau muda */
-            border-color: #34d399; /* Hijau */
+             background-color: #a7f3d0;
+             border-color: #34d399;
         }
         
-        /* Animasi untuk notifikasi */
         @keyframes fadeInOut {
             0%, 100% { opacity: 0; transform: scale(0.8); }
             20%, 80% { opacity: 1; transform: scale(1); }
@@ -69,7 +84,6 @@
             animation: fadeInOut 2s ease-in-out forwards;
         }
 
-        /* Animasi goyang untuk jawaban salah */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
@@ -95,7 +109,6 @@
                     <button id="start-level-1" data-level="1" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-green-500 border-green-700 rounded-xl py-4">
                         Level 1
                     </button>
-                    <!-- PERUBAHAN: Target Bintang baru -->
                     <button id="start-level-2" data-level="2" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-yellow-500 border-yellow-700 rounded-xl py-4">
                         Level 2 <span id="unlock-2" class="text-sm">(Kunci: 30⭐)</span>
                     </button>
@@ -173,18 +186,16 @@
         const feedbackMessage = document.getElementById('feedback-message');
         const feedbackStars = document.getElementById('feedback-stars');
         
-        // --- PERUBAHAN: Database Kata-kata direvisi total ---
         const wordList = {
-            1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'TOPI', 'BAJU', 'PAGI', 'NAGA', 'DUKU', 'LIMA', 'GIGI', 'FOTO', 'KADO'], // Hanya KVKV atau KVKV
-            '1_advanced': ['KELAPA', 'LEMARI', 'SEPEDA', 'KERETA', 'TOMAT', 'MELON'], // Kata 3 suku kata untuk level 1
-            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'TRAKTOR', 'HELMET', 'SUPERMARKET'], // Akhiran Konsonan
-            3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'LUKISAN', 'TANAMAN', 'JALANAN', 'LOMPATAN', 'TARIKAN', 'PEGANGAN'], // Pola dengan imbuhan -an
-            4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU', 'TANDING'] // Pola NG dan NY
+            1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'TOPI', 'BAJU', 'PAGI', 'NAGA', 'DUKU', 'LIMA', 'GIGI', 'FOTO', 'KADO'],
+            '1_advanced': ['KELAPA', 'LEMARI', 'SEPEDA', 'KERETA', 'TOMAT', 'MELON'],
+            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'TRAKTOR', 'HELMET', 'SUPERMARKET'],
+            3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'LUKISAN', 'TANAMAN', 'JALANAN', 'LOMPATAN', 'TARIKAN', 'PEGANGAN'],
+            4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU', 'TANDING']
         };
 
-        const distractorLetters = "AEIOUKMBLPRSTG"; // Huruf pengecoh yang sering muncul
+        const distractorLetters = "AEIOUKMBLPRSTG";
         
-        // State Permainan
         let currentLevel = 1;
         let totalStars = 0;
         let currentWord = '';
@@ -192,11 +203,12 @@
         let startTime = 0;
         const TIME_LIMIT = 30;
 
-        // PERUBAHAN: Sistem untuk melacak kata yang sudah digunakan
         let usedWords = { 1: [], 2: [], 3: [], 4: [] };
+        let isAnimating = false;
+        
+        let selectedCard = null;
 
-
-        // --- 2. LOGIKA PERMAINAN ---
+        // --- 2. LOGIKA PERMAINAN UTAMA ---
 
         function selectLevel(level) {
             currentLevel = level;
@@ -208,32 +220,22 @@
         }
         
         function nextWord() {
-            // --- PERUBAHAN: Logika pemilihan kata yang lebih canggih ---
             let wordPool = [...wordList[currentLevel]];
-            
-            // Jika di level 1 dan bintang >= 15, tambahkan kata 3 suku kata
             if (currentLevel == 1 && totalStars >= 15) {
                 wordPool.push(...wordList['1_advanced']);
             }
-
-            // Filter kata yang sudah digunakan
             let availableWords = wordPool.filter(word => !usedWords[currentLevel].includes(word));
-
-            // Jika semua kata sudah habis, reset daftar kata bekas untuk level ini dan coba lagi
             if (availableWords.length === 0) {
                 usedWords[currentLevel] = [];
-                availableWords = wordPool.filter(word => !usedWords[currentLevel].includes(word));
+                availableWords = wordPool;
             }
-
             currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
-            usedWords[currentLevel].push(currentWord); // Tandai kata sebagai sudah digunakan
-
+            usedWords[currentLevel].push(currentWord);
             
-            // Bersihkan area permainan
             answerContainer.innerHTML = '';
             lettersContainer.innerHTML = '';
+            selectedCard = null;
             
-            // Buat huruf-huruf pilihan
             let choiceLetters = [...currentWord];
             const neededDistractors = Math.max(3, Math.floor(currentWord.length / 2));
             while (choiceLetters.length < currentWord.length + neededDistractors) {
@@ -247,17 +249,18 @@
 
             for (let i = 0; i < currentWord.length; i++) {
                 const slot = document.createElement('div');
-                slot.className = 'answer-slot w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold';
-                slot.dataset.index = i;
-                answerContainer.appendChild(slot);
+                slot.className = 'answer-slot w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center';
+                answerContainer.appendChild(slot); 
+                slot.addEventListener('click', () => handleSlotClick(slot)); 
             }
 
             choiceLetters.forEach(letter => {
                 const card = document.createElement('button');
-                card.className = 'letter-card btn-3d w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white cursor-grab';
+                card.className = 'letter-card btn-3d w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white';
                 card.textContent = letter;
+                // PERBAIKAN: Semua kartu menggunakan satu handler utama
+                card.addEventListener('click', masterCardClickHandler);
                 lettersContainer.appendChild(card);
-                makeDraggable(card);
             });
             
             setTimeout(() => speakWord(currentWord), 500);
@@ -271,8 +274,6 @@
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
-            } else {
-                alert("Maaf, browsermu tidak mendukung fitur suara.");
             }
         }
         
@@ -310,17 +311,14 @@
                  clearInterval(timerId);
                 if (answeredWord === currentWord) {
                     const timeTaken = (Date.now() - startTime) / 1000;
-                    
                     let starsWon = 0;
                     if (timeTaken < 7) starsWon = 5;
                     else if (timeTaken < 12) starsWon = 4;
                     else if (timeTaken < 18) starsWon = 3;
                     else if (timeTaken < 24) starsWon = 2;
                     else if (timeTaken < 30) starsWon = 1;
-                    
                     totalStars += starsWon;
                     updateStarDisplay();
-                    
                     showFeedback('Hebat!', `+${starsWon} ⭐`);
                     setTimeout(nextWord, 2000);
                 } else {
@@ -328,24 +326,141 @@
                     answerContainer.classList.add('shake-animation');
                     setTimeout(() => {
                          answerContainer.classList.remove('shake-animation');
+                         const returnedCards = [];
                          filledSlots.forEach(slot => {
                             if (slot.firstElementChild) {
-                                const card = slot.firstElementChild;
-                                card.style.position = 'static';
-                                card.style.cursor = 'grab';
-                                card.disabled = false;
-                                lettersContainer.appendChild(card);
+                                returnedCards.push(slot.firstElementChild);
                                 slot.innerHTML = '';
                                 slot.classList.remove('filled');
                             }
                          });
+                         const existingCards = Array.from(lettersContainer.children);
+                         const allCards = [...returnedCards, ...existingCards];
+                         allCards.forEach(card => card.disabled = false);
+                         lettersContainer.innerHTML = '';
+                         allCards.sort((a, b) => a.textContent.localeCompare(b.textContent))
+                               .forEach(c => lettersContainer.appendChild(c));
                          startTimer();
                     }, 1000);
                 }
             }
         }
         
-        // --- 3. FUNGSI BANTU & UI ---
+        // --- 3. LOGIKA INTERAKSI KLIK TERPUSAT ---
+
+        function masterCardClickHandler(event) {
+            const card = event.currentTarget;
+            const parent = card.parentElement;
+
+            if (parent.id === 'letters-container') {
+                // --- LOGIKA UNTUK KARTU PILIHAN ---
+                if (isAnimating) return;
+
+                if (selectedCard === card) {
+                    card.classList.remove('selected');
+                    selectedCard = null;
+                } else {
+                    if (selectedCard) {
+                        selectedCard.classList.remove('selected');
+                    }
+                    selectedCard = card;
+                    card.classList.add('selected');
+                }
+            } else if (parent.classList.contains('answer-slot')) {
+                // --- LOGIKA UNTUK KARTU JAWABAN ---
+                if (isAnimating) return;
+                const DOUBLE_CLICK_DELAY = 300;
+
+                if (card.lastClick && (Date.now() - card.lastClick < DOUBLE_CLICK_DELAY)) {
+                    // Double Click
+                    card.lastClick = null;
+                    returnCardToChoices(card);
+                } else {
+                    // Single Click
+                    card.lastClick = Date.now();
+                    if (selectedCard === card) {
+                        card.classList.remove('selected');
+                        selectedCard = null;
+                    } else {
+                        if (selectedCard) {
+                            selectedCard.classList.remove('selected');
+                        }
+                        selectedCard = card;
+                        card.classList.add('selected');
+                    }
+                }
+            }
+        }
+
+        function handleSlotClick(slot) {
+            if (isAnimating || !selectedCard || slot.hasChildNodes()) return;
+
+            const sourceParent = selectedCard.parentElement;
+
+            if (sourceParent.id === 'letters-container') {
+                // Pindahkan dari Pilihan ke Jawaban
+                animateCardToSlot(selectedCard, slot);
+            } else if (sourceParent.classList.contains('answer-slot')) {
+                // Pindahkan dari Jawaban ke Jawaban lain
+                sourceParent.classList.remove('filled');
+                slot.appendChild(selectedCard);
+                slot.classList.add('filled');
+                selectedCard.classList.remove('selected');
+            }
+            selectedCard = null;
+        }
+        
+        function returnCardToChoices(card) {
+            const sourceSlot = card.parentElement;
+            sourceSlot.innerHTML = '';
+            sourceSlot.classList.remove('filled');
+            card.classList.remove('selected');
+            
+            lettersContainer.appendChild(card);
+            const allCards = Array.from(lettersContainer.children);
+            allCards.sort((a, b) => a.textContent.localeCompare(b.textContent))
+                  .forEach(c => lettersContainer.appendChild(c));
+            
+            if (selectedCard === card) {
+                selectedCard = null;
+            }
+        }
+
+        function animateCardToSlot(card, slot) {
+            isAnimating = true;
+            const startRect = card.getBoundingClientRect();
+            card.style.visibility = 'hidden';
+
+            const flyingClone = card.cloneNode(true);
+            flyingClone.style.visibility = 'visible';
+            flyingClone.classList.add('flying-card', 'selected');
+            flyingClone.style.position = 'absolute';
+            flyingClone.style.zIndex = '2000';
+            flyingClone.style.left = `${startRect.left}px`;
+            flyingClone.style.top = `${startRect.top}px`;
+            document.body.appendChild(flyingClone);
+
+            const targetRect = slot.getBoundingClientRect();
+            
+            requestAnimationFrame(() => {
+                flyingClone.style.left = `${targetRect.left}px`;
+                flyingClone.style.top = `${targetRect.top}px`;
+            });
+
+            setTimeout(() => {
+                document.body.removeChild(flyingClone);
+                
+                card.style.visibility = 'visible';
+                card.classList.remove('selected');
+                slot.appendChild(card);
+                slot.classList.add('filled');
+
+                isAnimating = false;
+                checkAnswer();
+            }, 400);
+        }
+
+        // --- 4. FUNGSI BANTU & UI LAINNYA ---
 
         function updateStarDisplay() {
             starDisplay.textContent = totalStars;
@@ -356,7 +471,6 @@
             const unlock3 = document.getElementById('unlock-3');
             const unlock4 = document.getElementById('unlock-4');
             
-            // PERUBAHAN: Target Bintang baru
             const starTarget2 = 30;
             const starTarget3 = 50;
             const starTarget4 = 75;
@@ -412,83 +526,7 @@
             }, 1900);
         }
 
-        // --- PERBAIKAN FINAL: Fungsi Drag-and-Drop yang sangat presisi ---
-        function makeDraggable(element) {
-            let shiftX = 0;
-            let shiftY = 0;
-
-            function onPointerDown(e) {
-                if (e.button !== 0 || element.disabled) return;
-                
-                const rect = element.getBoundingClientRect();
-                shiftX = e.clientX - rect.left;
-                shiftY = e.clientY - rect.top;
-
-                element.setPointerCapture(e.pointerId);
-                
-                element.style.position = 'absolute';
-                element.style.zIndex = 1000;
-                element.style.cursor = 'grabbing';
-                element.style.width = `${rect.width}px`;
-                element.style.height = `${rect.height}px`;
-
-                // Pindahkan elemen ke body untuk konteks posisi yang bersih
-                document.body.appendChild(element);
-
-                moveAt(e.pageX, e.pageY);
-            }
-
-            function moveAt(pageX, pageY) {
-                // Posisikan elemen menggunakan pageX/pageY yang sudah memperhitungkan scroll
-                // dan kurangi dengan offset awal klik mouse
-                element.style.left = pageX - shiftX + 'px';
-                element.style.top = pageY - shiftY + 'px';
-            }
-
-            function onPointerMove(e) {
-                if (element.hasPointerCapture(e.pointerId)) {
-                    moveAt(e.pageX, e.pageY);
-                }
-            }
-
-            function onPointerUp(e) {
-                if (!element.hasPointerCapture(e.pointerId)) return;
-
-                element.releasePointerCapture(e.pointerId);
-
-                element.style.visibility = 'hidden';
-                const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
-                element.style.visibility = 'visible';
-                
-                // Kembalikan semua style ke awal SEBELUM dipindahkan ke wadah baru
-                element.style.position = 'static';
-                element.style.zIndex = 'auto';
-                element.style.cursor = 'grab';
-                element.style.left = '';
-                element.style.top = '';
-                element.style.width = '';
-                element.style.height = '';
-
-                const targetSlot = dropTarget ? dropTarget.closest('.answer-slot') : null;
-
-                if (targetSlot && !targetSlot.hasChildNodes()) {
-                    targetSlot.appendChild(element); // Pindahkan ke slot
-                    element.style.position = 'relative'; // Atur posisi di dalam slot
-                    element.disabled = true; 
-                    targetSlot.classList.add('filled');
-                    checkAnswer();
-                } else {
-                    lettersContainer.appendChild(element); // Kembalikan ke tempat pilihan
-                }
-            }
-            
-            element.addEventListener('pointerdown', onPointerDown);
-            element.addEventListener('pointermove', onPointerMove);
-            element.addEventListener('pointerup', onPointerUp);
-            element.ondragstart = () => false;
-        }
-
-        // --- 4. EVENT LISTENERS UTAMA ---
+        // --- 5. EVENT LISTENERS UTAMA ---
         levelButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 const level = parseInt(e.currentTarget.dataset.level);
