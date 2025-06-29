@@ -234,10 +234,22 @@
         }
         
         function nextWord() {
-            let wordPool = [...wordList[currentLevel]];
-            if (currentLevel == 1 && totalStars >= 15) {
-                wordPool.push(...wordList['1_advanced']);
+            let wordPool;
+            
+            // --- PERBAIKAN: Logika pemilihan kata untuk Level 1 yang lebih akurat ---
+            if (currentLevel == 1) {
+                if (totalStars >= 15) {
+                    // Jika sudah mencapai 15 bintang, hanya gunakan kata-kata advanced (KVKVKV)
+                    wordPool = [...wordList['1_advanced']];
+                } else {
+                    // Jika belum, gunakan kata-kata dasar (KVKV)
+                    wordPool = [...wordList[1]];
+                }
+            } else {
+                // Untuk level lain, gunakan seperti biasa
+                wordPool = [...wordList[currentLevel]];
             }
+
             let availableWords = wordPool.filter(word => !usedWords[currentLevel].includes(word));
             if (availableWords.length === 0) {
                 usedWords[currentLevel] = [];
@@ -250,7 +262,6 @@
             lettersContainer.innerHTML = '';
             selectedCard = null;
             
-            // PERUBAHAN: Atur jarak antar slot jawaban secara dinamis
             answerContainer.classList.remove('gap-1', 'md:gap-2', 'gap-2', 'md:gap-4');
             if (currentWord.length > 6) {
                 answerContainer.classList.add('gap-1', 'md:gap-2');
