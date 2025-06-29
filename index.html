@@ -99,7 +99,7 @@
 <body class="min-h-screen flex items-center justify-center p-4">
 
     <!-- Kontainer Utama Aplikasi -->
-    <div id="app-container" class="w-full max-w-3xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl shadow-2xl p-6 md:p-8">
+    <div id="app-container" class="w-full max-w-3xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl shadow-2xl p-1 md:p-8">
 
         <!-- Layar Awal (Start Screen) -->
         <div id="start-screen">
@@ -149,7 +149,7 @@
             </div>
            
             <!-- Area Jawaban dipaksa 1 baris & bisa scroll -->
-            <div id="answer-container" class="flex items-center flex-nowrap overflow-x-auto mb-8 p-2 min-h-[110px]">
+            <div id="answer-container" class="flex items-center flex-nowrap overflow-x-auto mb-8 p-1 min-h-[110px]">
                 <!-- Slot jawaban akan dibuat oleh JavaScript -->
             </div>
 
@@ -202,7 +202,7 @@
         const wordList = {
             1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'TOPI', 'BAJU', 'PAGI', 'NAGA', 'DUKU', 'LIMA', 'GIGI', 'FOTO', 'KADO'],
             '1_advanced': ['KEMEJA', 'CELANA', 'DELIMA', 'KEPALA', 'MENARA', 'SEPEDA', 'LEMARI', 'KERETA', 'HARIMAU'], // Pola KVKVKV
-            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'TRAKTOR', 'HELMET', 'SUPERMARKET'], // Akhiran Konsonan
+            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'HELMET', 'TELPON', 'GELAS', 'KIPAS'], // Akhiran Konsonan
             3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'LUKISAN', 'TANAMAN', 'JALANAN', 'LOMPATAN', 'TARIKAN', 'PEGANGAN'], // Pola dengan imbuhan -an
             4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU', 'TANDING'] // Pola NG dan NY
         };
