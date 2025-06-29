@@ -68,6 +68,7 @@
             background-color: rgba(255, 255, 255, 0.5);
             border: 3px dashed #66a6ff;
             cursor: pointer;
+            flex-shrink: 0; /* Mencegah slot menyusut */
         }
 
         .answer-slot.filled {
@@ -147,8 +148,8 @@
                 <p class="text-sm text-gray-500 mt-2">Tekan untuk dengar katanya</p>
             </div>
            
-            <!-- Area Jawaban (Slot Huruf) -->
-            <div id="answer-container" class="flex justify-center items-center flex-wrap gap-2 md:gap-4 mb-8 min-h-[80px]">
+            <!-- PERBAIKAN: Area Jawaban dipaksa 1 baris & bisa scroll -->
+            <div id="answer-container" class="flex items-center flex-nowrap overflow-x-auto gap-2 md:gap-4 mb-8 p-2 min-h-[110px]">
                 <!-- Slot jawaban akan dibuat oleh JavaScript -->
             </div>
 
@@ -258,7 +259,6 @@
                 const card = document.createElement('button');
                 card.className = 'letter-card btn-3d w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white';
                 card.textContent = letter;
-                // PERBAIKAN: Semua kartu menggunakan satu handler utama
                 card.addEventListener('click', masterCardClickHandler);
                 lettersContainer.appendChild(card);
             });
@@ -336,7 +336,7 @@
                          });
                          const existingCards = Array.from(lettersContainer.children);
                          const allCards = [...returnedCards, ...existingCards];
-                         allCards.forEach(card => card.disabled = false);
+                         allCards.forEach(card => card.addEventListener('click', masterCardClickHandler));
                          lettersContainer.innerHTML = '';
                          allCards.sort((a, b) => a.textContent.localeCompare(b.textContent))
                                .forEach(c => lettersContainer.appendChild(c));
@@ -353,9 +353,7 @@
             const parent = card.parentElement;
 
             if (parent.id === 'letters-container') {
-                // --- LOGIKA UNTUK KARTU PILIHAN ---
                 if (isAnimating) return;
-
                 if (selectedCard === card) {
                     card.classList.remove('selected');
                     selectedCard = null;
@@ -367,16 +365,13 @@
                     card.classList.add('selected');
                 }
             } else if (parent.classList.contains('answer-slot')) {
-                // --- LOGIKA UNTUK KARTU JAWABAN ---
                 if (isAnimating) return;
                 const DOUBLE_CLICK_DELAY = 300;
 
                 if (card.lastClick && (Date.now() - card.lastClick < DOUBLE_CLICK_DELAY)) {
-                    // Double Click
                     card.lastClick = null;
                     returnCardToChoices(card);
                 } else {
-                    // Single Click
                     card.lastClick = Date.now();
                     if (selectedCard === card) {
                         card.classList.remove('selected');
@@ -398,10 +393,8 @@
             const sourceParent = selectedCard.parentElement;
 
             if (sourceParent.id === 'letters-container') {
-                // Pindahkan dari Pilihan ke Jawaban
                 animateCardToSlot(selectedCard, slot);
             } else if (sourceParent.classList.contains('answer-slot')) {
-                // Pindahkan dari Jawaban ke Jawaban lain
                 sourceParent.classList.remove('filled');
                 slot.appendChild(selectedCard);
                 slot.classList.add('filled');
