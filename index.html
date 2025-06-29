@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dikte Ceria: Susun Kata</title>
+    
+    <!-- Impor Tailwind CSS untuk styling yang cepat dan responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Impor Font dari Google Fonts yang ramah anak -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Kustom untuk efek dan font */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+        }
+
+        h1, h2, h3 {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Efek 3D dan gradasi pada tombol dan kartu */
+        .btn-3d {
+            transition: all 0.1s ease-in-out;
+            border-bottom-width: 6px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .btn-3d:active {
+            transform: translateY(4px);
+            border-bottom-width: 2px;
+            filter: brightness(0.95);
+        }
+        
+        /* Gaya untuk kartu huruf yang bisa di-drag */
+        .letter-card {
+            touch-action: none; /* Mencegah scrolling saat drag di mobile */
+            user-select: none; /* Mencegah seleksi teks saat drag */
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-color: #f76d72;
+        }
+
+        /* Gaya untuk slot jawaban */
+        .answer-slot {
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 3px dashed #66a6ff;
+        }
+
+        /* Gaya saat huruf yang benar ditaruh di slot */
+        .answer-slot.filled {
+            border-style: solid;
+            background-color: #a7f3d0; /* Hijau muda */
+            border-color: #34d399; /* Hijau */
+        }
+        
+        /* Animasi untuk notifikasi */
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: scale(0.8); }
+            20%, 80% { opacity: 1; transform: scale(1); }
+        }
+        
+        .feedback-animation {
+            animation: fadeInOut 2s ease-in-out forwards;
+        }
+
+        /* Animasi goyang untuk jawaban salah */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+            20%, 40%, 60%, 80% { transform: translateX(8px); }
+        }
+        
+        .shake-animation {
+            animation: shake 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Kontainer Utama Aplikasi -->
+    <div id="app-container" class="w-full max-w-3xl mx-auto bg-white/70 backdrop-blur-sm rounded-3xl shadow-2xl p-6 md:p-8">
+
+        <!-- Layar Awal (Start Screen) -->
+        <div id="start-screen">
+            <div class="text-center">
+                <h1 class="text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500 mb-4">Dikte Ceria</h1>
+                <p class="text-lg text-gray-600 mb-8">Ayo belajar membaca sambil bermain!</p>
+                <div class="flex flex-col items-center space-y-4">
+                    <button id="start-level-1" data-level="1" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-green-500 border-green-700 rounded-xl py-4">
+                        Level 1
+                    </button>
+                    <button id="start-level-2" data-level="2" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-yellow-500 border-yellow-700 rounded-xl py-4">
+                        Level 2 <span id="unlock-2" class="text-sm">(Kunci: 50⭐)</span>
+                    </button>
+                    <button id="start-level-3" data-level="3" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-red-500 border-red-700 rounded-xl py-4">
+                        Level 3 <span id="unlock-3" class="text-sm">(Kunci: 100⭐)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layar Permainan (Game Screen) -->
+        <div id="game-screen" class="hidden">
+            <!-- Header Permainan -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-700">Level <span id="level-display">1</span></h2>
+                <button id="back-to-menu" class="text-sm text-white bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-lg shadow-md">Kembali</button>
+                <div class="flex items-center gap-2 text-3xl font-bold text-yellow-500">
+                    <span class="text-yellow-400">⭐</span>
+                    <span id="star-display">0</span>
+                </div>
+            </div>
+
+            <!-- Timer Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-6 shadow-inner">
+                <div id="timer-bar" class="bg-gradient-to-r from-blue-400 to-cyan-300 h-4 rounded-full transition-all duration-200 ease-linear"></div>
+            </div>
+
+            <!-- Area Soal -->
+            <div class="text-center mb-6">
+                 <button id="speak-btn" class="btn-3d text-4xl bg-blue-500 border-blue-700 text-white rounded-full p-5 shadow-lg">
+                    <span>🔊</span>
+                </button>
+                <p class="text-sm text-gray-500 mt-2">Tekan untuk dengar katanya</p>
+            </div>
+           
+            <!-- Area Jawaban (Slot Huruf) -->
+            <div id="answer-container" class="flex justify-center items-center gap-2 md:gap-4 mb-8 min-h-[80px]">
+                <!-- Slot jawaban akan dibuat oleh JavaScript -->
+            </div>
+
+            <!-- Pilihan Huruf (Kartu) -->
+            <div id="letters-container" class="flex justify-center items-center flex-wrap gap-3 md:gap-4 p-4 bg-white/50 rounded-2xl min-h-[100px]">
+                <!-- Kartu huruf akan dibuat oleh JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Notifikasi Umpan Balik (Feedback) -->
+        <div id="feedback-container" class="hidden absolute inset-0 bg-black/30 z-50 items-center justify-center">
+            <div id="feedback-box" class="text-center text-white p-8">
+                <p id="feedback-message" class="text-6xl font-bold mb-4"></p>
+                <p id="feedback-stars" class="text-4xl"></p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. DEKLARASI ELEMEN & VARIABEL ---
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const levelButtons = document.querySelectorAll('.level-btn');
+        const backToMenuBtn = document.getElementById('back-to-menu');
+        
+        const levelDisplay = document.getElementById('level-display');
+        const starDisplay = document.getElementById('star-display');
+        const timerBar = document.getElementById('timer-bar');
+        const speakBtn = document.getElementById('speak-btn');
+        const answerContainer = document.getElementById('answer-container');
+        const lettersContainer = document.getElementById('letters-container');
+        
+        const feedbackContainer = document.getElementById('feedback-container');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const feedbackStars = document.getElementById('feedback-stars');
+        
+        // Database Kata-kata
+        const wordList = {
+            1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'AYAM', 'TOPI', 'BAJU', 'PAGI', 'IBU', 'AYAH', 'NAGA', 'DUKU'],
+            2: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'HARIMAU', 'SEPEDA', 'KERETA', 'JENDELA', 'LEMARI', 'PUKULI', 'PANJATI', 'AMBILKAN', 'BERIKAN', 'SEMANGKA'],
+            3: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU']
+        };
+
+        const distractorLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        
+        // State Permainan
+        let currentLevel = 1;
+        let totalStars = 0;
+        let currentWord = '';
+        let timerId = null;
+        let startTime = 0;
+        const TIME_LIMIT = 30; // --- PERUBAHAN: Waktu diubah menjadi 30 detik ---
+
+        // --- 2. LOGIKA PERMAINAN ---
+
+        // Fungsi untuk memulai level yang dipilih
+        function selectLevel(level) {
+            currentLevel = level;
+            // totalStars = 0; // Komentari baris ini agar bintang tidak reset setiap ganti level
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            levelDisplay.textContent = currentLevel;
+            updateStarDisplay();
+            nextWord();
+        }
+        
+        // Fungsi untuk mempersiapkan soal berikutnya
+        function nextWord() {
+            // Pilih kata acak dari level saat ini
+            const availableWords = wordList[currentLevel];
+            currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+            
+            // Bersihkan area permainan
+            answerContainer.innerHTML = '';
+            lettersContainer.innerHTML = '';
+            
+            // Buat huruf-huruf pilihan
+            let choiceLetters = [...currentWord];
+            const neededDistractors = Math.max(2, Math.floor(currentWord.length / 2)); // Tambah huruf pengecoh
+            while (choiceLetters.length < currentWord.length + neededDistractors) {
+                const randomLetter = distractorLetters[Math.floor(Math.random() * distractorLetters.length)];
+                if (!choiceLetters.includes(randomLetter)) {
+                    choiceLetters.push(randomLetter);
+                }
+            }
+            
+            // Acak huruf pilihan
+            choiceLetters.sort(() => Math.random() - 0.5);
+
+            // Tampilkan slot jawaban dan kartu huruf
+            for (let i = 0; i < currentWord.length; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'answer-slot w-16 h-20 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold';
+                slot.dataset.index = i;
+                answerContainer.appendChild(slot);
+            }
+
+            choiceLetters.forEach(letter => {
+                const card = document.createElement('button');
+                card.className = 'letter-card btn-3d w-16 h-20 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white cursor-grab';
+                card.textContent = letter;
+                lettersContainer.appendChild(card);
+                
+                // Tambahkan event listener untuk drag-and-drop
+                makeDraggable(card);
+            });
+            
+            // Ucapkan kata dan mulai timer
+            setTimeout(() => speakWord(currentWord), 500);
+            startTimer();
+        }
+
+        // Fungsi untuk mengucapkan kata
+        function speakWord(word) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Hentikan suara sebelumnya jika ada
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.8;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Maaf, browsermu tidak mendukung fitur suara.");
+            }
+        }
+        
+        // Fungsi untuk memulai timer
+        function startTimer() {
+            clearInterval(timerId);
+            startTime = Date.now();
+            timerBar.style.width = '100%';
+            // Memaksa browser untuk repaint agar transisi berjalan
+            void timerBar.offsetWidth; 
+            timerBar.style.transition = `width ${TIME_LIMIT}s linear`;
+            timerBar.style.width = '0%';
+            
+            timerId = setTimeout(handleTimeUp, TIME_LIMIT * 1000);
+        }
+
+        // Fungsi yang dijalankan jika waktu habis
+        function handleTimeUp() {
+            totalStars = Math.max(0, totalStars - 1);
+            updateStarDisplay();
+            showFeedback('Waktu Habis!', '💔 -1⭐');
+            setTimeout(nextWord, 2000);
+        }
+        
+        // Fungsi untuk mengecek jawaban
+        function checkAnswer() {
+            const filledSlots = answerContainer.querySelectorAll('.answer-slot');
+            let answeredWord = '';
+            let allSlotsFilled = true;
+            filledSlots.forEach(slot => {
+                if (slot.textContent) {
+                    answeredWord += slot.textContent;
+                } else {
+                    allSlotsFilled = false;
+                }
+            });
+
+            if (allSlotsFilled) {
+                 clearInterval(timerId); // Hentikan timer
+                if (answeredWord === currentWord) {
+                    const timeTaken = (Date.now() - startTime) / 1000;
+                    
+                    // --- PERUBAHAN: Penyesuaian sistem bintang untuk 30 detik ---
+                    let starsWon = 0;
+                    if (timeTaken < 7) starsWon = 5;       // Kurang dari 7 detik
+                    else if (timeTaken < 12) starsWon = 4; // Kurang dari 12 detik
+                    else if (timeTaken < 18) starsWon = 3; // Kurang dari 18 detik
+                    else if (timeTaken < 24) starsWon = 2; // Kurang dari 24 detik
+                    else starsWon = 1;                     // Sisanya sebelum 30 detik
+                    
+                    totalStars += starsWon;
+                    updateStarDisplay();
+                    
+                    showFeedback('Hebat!', `+${starsWon} ⭐`);
+                    setTimeout(nextWord, 2000);
+                } else {
+                    showFeedback('Coba Lagi!', '🤔');
+                    answerContainer.classList.add('shake-animation');
+                    // Reset setelah animasi selesai
+                    setTimeout(() => {
+                         answerContainer.classList.remove('shake-animation');
+                         filledSlots.forEach(slot => {
+                            if (slot.firstElementChild) {
+                                // Kembalikan kartu huruf ke tempat pilihan
+                                const card = slot.firstElementChild;
+                                card.style.position = 'static';
+                                card.style.cursor = 'grab';
+                                card.disabled = false;
+                                lettersContainer.appendChild(card);
+                                slot.innerHTML = ''; // Kosongkan slot
+                                slot.classList.remove('filled');
+                            }
+                         });
+                         // Mulai lagi timer setelah reset
+                         startTimer();
+                    }, 1000);
+                }
+            }
+        }
+        
+        // --- 3. FUNGSI BANTU & UI ---
+
+        function updateStarDisplay() {
+            starDisplay.textContent = totalStars;
+            // Cek untuk membuka level baru
+            const btnLevel2 = document.getElementById('start-level-2');
+            const btnLevel3 = document.getElementById('start-level-3');
+            const unlock2 = document.getElementById('unlock-2');
+            const unlock3 = document.getElementById('unlock-3');
+            
+            const starTarget2 = 50;
+            const starTarget3 = 100;
+
+            if (totalStars >= starTarget2) {
+                btnLevel2.disabled = false;
+                if (unlock2) unlock2.innerHTML = '✅ Terbuka!';
+                 btnLevel2.classList.remove('bg-yellow-500', 'border-yellow-700');
+                btnLevel2.classList.add('bg-green-500', 'border-green-700');
+            } else {
+                 btnLevel2.disabled = true;
+                 if (unlock2) unlock2.textContent = `(Kunci: ${starTarget2-totalStars}⭐ lagi)`;
+                 btnLevel2.classList.add('bg-yellow-500', 'border-yellow-700');
+                 btnLevel2.classList.remove('bg-green-500', 'border-green-700');
+            }
+            
+            if (totalStars >= starTarget3) {
+                 btnLevel3.disabled = false;
+                 if (unlock3) unlock3.innerHTML = '✅ Terbuka!';
+                 btnLevel3.classList.remove('bg-red-500', 'border-red-700');
+                 btnLevel3.classList.add('bg-green-500', 'border-green-700');
+            } else {
+                 btnLevel3.disabled = true;
+                 if (unlock3) unlock3.textContent = `(Kunci: ${starTarget3-totalStars}⭐ lagi)`;
+                 btnLevel3.classList.add('bg-red-500', 'border-red-700');
+                 btnLevel3.classList.remove('bg-green-500', 'border-green-700');
+            }
+        }
+        
+        // Fungsi untuk menampilkan notifikasi
+        function showFeedback(message, stars) {
+            feedbackMessage.textContent = message;
+            feedbackStars.innerHTML = stars; // Pakai innerHTML untuk render emoji
+            feedbackContainer.classList.remove('hidden');
+            feedbackContainer.classList.add('flex');
+            feedbackContainer.firstElementChild.classList.add('feedback-animation');
+            
+            setTimeout(() => {
+                feedbackContainer.classList.add('hidden');
+                feedbackContainer.classList.remove('flex');
+                feedbackContainer.firstElementChild.classList.remove('feedback-animation');
+            }, 1900);
+        }
+
+        // Fungsi Drag-and-Drop yang lebih baik
+        function makeDraggable(element) {
+            function onPointerDown(e) {
+                if (e.button !== 0) return; // Hanya untuk klik kiri
+                element.setPointerCapture(e.pointerId); // Mengunci pointer ke elemen
+
+                element.style.cursor = 'grabbing';
+                element.style.position = 'absolute';
+                element.style.zIndex = 1000;
+
+                moveAt(e.pageX, e.pageY);
+            }
+
+            function moveAt(pageX, pageY) {
+                element.style.left = pageX - element.offsetWidth / 2 + 'px';
+                element.style.top = pageY - element.offsetHeight / 2 + 'px';
+            }
+
+            function onPointerMove(e) {
+                if (element.hasPointerCapture(e.pointerId)) {
+                    moveAt(e.pageX, e.pageY);
+                }
+            }
+
+            function onPointerUp(e) {
+                if (!element.hasPointerCapture(e.pointerId)) return;
+
+                element.releasePointerCapture(e.pointerId);
+                element.style.cursor = 'grab';
+                element.style.position = 'static';
+                element.style.zIndex = 'auto';
+
+                let droppedOnSlot = null;
+                const allSlots = answerContainer.querySelectorAll('.answer-slot');
+                allSlots.forEach(slot => {
+                    const rect = slot.getBoundingClientRect();
+                    if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) {
+                        if (!slot.hasChildNodes()) { // Hanya jika slot kosong
+                            droppedOnSlot = slot;
+                        }
+                    }
+                });
+
+                if (droppedOnSlot) {
+                    // Masukkan kartu ke dalam slot
+                    droppedOnSlot.appendChild(element);
+                    element.style.position = 'relative'; // Reset posisi di dalam slot
+                    element.style.left = 'auto';
+                    element.style.top = 'auto';
+                    element.disabled = true; // Nonaktifkan kartu
+                    droppedOnSlot.classList.add('filled');
+                    checkAnswer();
+                } else {
+                    // Kembalikan ke tempat semula jika tidak di slot yang valid
+                    lettersContainer.appendChild(element);
+                }
+            }
+            
+            element.addEventListener('pointerdown', onPointerDown);
+            element.addEventListener('pointermove', onPointerMove);
+            element.addEventListener('pointerup', onPointerUp);
+        }
+
+
+        // --- 4. EVENT LISTENERS UTAMA ---
+        levelButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const level = parseInt(e.currentTarget.dataset.level);
+                selectLevel(level);
+            });
+        });
+        
+        speakBtn.addEventListener('click', () => {
+            if (currentWord) {
+                speakWord(currentWord);
+            }
+        });
+        
+        backToMenuBtn.addEventListener('click', () => {
+            clearInterval(timerId);
+            gameScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            updateStarDisplay(); // Update tampilan kunci di menu utama
+        });
+        
+        // Inisialisasi awal saat halaman dimuat
+        window.onload = () => {
+            updateStarDisplay();
+        };
+
+    </script>
+</body>
+</html>
