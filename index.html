@@ -148,7 +148,7 @@
                 <p class="text-sm text-gray-500 mt-2">Tekan untuk dengar katanya</p>
             </div>
            
-            <!-- PERBAIKAN: Area Jawaban dipaksa 1 baris & bisa scroll -->
+            <!-- Area Jawaban dipaksa 1 baris & bisa scroll -->
             <div id="answer-container" class="flex items-center flex-nowrap overflow-x-auto gap-2 md:gap-4 mb-8 p-2 min-h-[110px]">
                 <!-- Slot jawaban akan dibuat oleh JavaScript -->
             </div>
@@ -164,6 +164,18 @@
             <div id="feedback-box" class="text-center text-white p-8">
                 <p id="feedback-message" class="text-6xl font-bold mb-4"></p>
                 <p id="feedback-stars" class="text-4xl"></p>
+            </div>
+        </div>
+
+        <!-- Notifikasi Naik Level -->
+        <div id="level-up-modal" class="hidden absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <h2 id="level-up-title" class="text-3xl font-bold text-green-500 mb-4">Level Terbuka!</h2>
+                <p id="level-up-message" class="text-gray-600 mb-6">Kamu hebat! Level 2 sudah bisa dimainkan.</p>
+                <div class="flex justify-center gap-4">
+                    <button id="level-up-repeat" class="btn-3d w-40 text-lg font-bold text-white bg-gray-500 border-gray-700 rounded-xl py-3">Ulangi Level</button>
+                    <button id="level-up-continue" class="btn-3d w-40 text-lg font-bold text-white bg-blue-500 border-blue-700 rounded-xl py-3">Lanjutkan</button>
+                </div>
             </div>
         </div>
 
@@ -187,12 +199,13 @@
         const feedbackMessage = document.getElementById('feedback-message');
         const feedbackStars = document.getElementById('feedback-stars');
         
+        // --- PERUBAHAN: Database Kata-kata direvisi ---
         const wordList = {
             1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'TOPI', 'BAJU', 'PAGI', 'NAGA', 'DUKU', 'LIMA', 'GIGI', 'FOTO', 'KADO'],
-            '1_advanced': ['KELAPA', 'LEMARI', 'SEPEDA', 'KERETA', 'TOMAT', 'MELON'],
-            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'TRAKTOR', 'HELMET', 'SUPERMARKET'],
-            3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'LUKISAN', 'TANAMAN', 'JALANAN', 'LOMPATAN', 'TARIKAN', 'PEGANGAN'],
-            4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU', 'TANDING']
+            '1_advanced': ['KEMEJA', 'CELANA', 'DELIMA', 'KEPALA', 'MENARA', 'SEPEDA', 'LEMARI', 'KERETA', 'HARIMAU'], // Pola KVKVKV
+            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'TRAKTOR', 'HELMET', 'SUPERMARKET'], // Akhiran Konsonan
+            3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'LUKISAN', 'TANAMAN', 'JALANAN', 'LOMPATAN', 'TARIKAN', 'PEGANGAN'], // Pola dengan imbuhan -an
+            4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU', 'TANDING'] // Pola NG dan NY
         };
 
         const distractorLetters = "AEIOUKMBLPRSTG";
@@ -208,6 +221,7 @@
         let isAnimating = false;
         
         let selectedCard = null;
+        let levelUnlockNotified = { 2: false, 3: false, 4: false };
 
         // --- 2. LOGIKA PERMAINAN UTAMA ---
 
@@ -318,9 +332,25 @@
                     else if (timeTaken < 24) starsWon = 2;
                     else if (timeTaken < 30) starsWon = 1;
                     totalStars += starsWon;
-                    updateStarDisplay();
+                    
                     showFeedback('Hebat!', `+${starsWon} ⭐`);
-                    setTimeout(nextWord, 2000);
+                    updateStarDisplay();
+
+                    const starTargets = { 2: 30, 3: 50, 4: 75 };
+                    let triggeredLevelUp = false;
+                    for (const level in starTargets) {
+                        if (totalStars >= starTargets[level] && !levelUnlockNotified[level]) {
+                            levelUnlockNotified[level] = true;
+                            setTimeout(() => showLevelUpModal(parseInt(level)), 1800);
+                            triggeredLevelUp = true;
+                            break;
+                        }
+                    }
+
+                    if (!triggeredLevelUp) {
+                        setTimeout(nextWord, 2000);
+                    }
+
                 } else {
                     showFeedback('Coba Lagi!', '🤔');
                     answerContainer.classList.add('shake-animation');
@@ -518,6 +548,34 @@
                 feedbackContainer.firstElementChild.classList.remove('feedback-animation');
             }, 1900);
         }
+
+        function showLevelUpModal(nextLevel) {
+            const modal = document.getElementById('level-up-modal');
+            const message = document.getElementById('level-up-message');
+            const repeatBtn = document.getElementById('level-up-repeat');
+            const continueBtn = document.getElementById('level-up-continue');
+
+            message.textContent = `Kamu hebat! Level ${nextLevel} sudah bisa dimainkan.`;
+            
+            const newRepeatBtn = repeatBtn.cloneNode(true);
+            repeatBtn.parentNode.replaceChild(newRepeatBtn, repeatBtn);
+
+            const newContinueBtn = continueBtn.cloneNode(true);
+            continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
+            
+            newRepeatBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                nextWord();
+            });
+
+            newContinueBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                selectLevel(nextLevel);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
 
         // --- 5. EVENT LISTENERS UTAMA ---
         levelButtons.forEach(button => {
