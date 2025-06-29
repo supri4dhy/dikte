@@ -149,7 +149,7 @@
             </div>
            
             <!-- Area Jawaban dipaksa 1 baris & bisa scroll -->
-            <div id="answer-container" class="flex items-center flex-nowrap overflow-x-auto gap-2 md:gap-4 mb-8 p-2 min-h-[110px]">
+            <div id="answer-container" class="flex items-center flex-nowrap overflow-x-auto mb-8 p-2 min-h-[110px]">
                 <!-- Slot jawaban akan dibuat oleh JavaScript -->
             </div>
 
@@ -199,7 +199,6 @@
         const feedbackMessage = document.getElementById('feedback-message');
         const feedbackStars = document.getElementById('feedback-stars');
         
-        // --- PERUBAHAN: Database Kata-kata direvisi ---
         const wordList = {
             1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'TOPI', 'BAJU', 'PAGI', 'NAGA', 'DUKU', 'LIMA', 'GIGI', 'FOTO', 'KADO'],
             '1_advanced': ['KEMEJA', 'CELANA', 'DELIMA', 'KEPALA', 'MENARA', 'SEPEDA', 'LEMARI', 'KERETA', 'HARIMAU'], // Pola KVKVKV
@@ -251,6 +250,14 @@
             lettersContainer.innerHTML = '';
             selectedCard = null;
             
+            // PERUBAHAN: Atur jarak antar slot jawaban secara dinamis
+            answerContainer.classList.remove('gap-1', 'md:gap-2', 'gap-2', 'md:gap-4');
+            if (currentWord.length > 6) {
+                answerContainer.classList.add('gap-1', 'md:gap-2');
+            } else {
+                answerContainer.classList.add('gap-2', 'md:gap-4');
+            }
+
             let choiceLetters = [...currentWord];
             const neededDistractors = Math.max(3, Math.floor(currentWord.length / 2));
             while (choiceLetters.length < currentWord.length + neededDistractors) {
