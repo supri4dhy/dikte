@@ -18,6 +18,7 @@
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+            overflow: hidden; /* Mencegah scroll saat drag */
         }
 
         h1, h2, h3 {
@@ -94,6 +95,7 @@
                     <button id="start-level-1" data-level="1" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-green-500 border-green-700 rounded-xl py-4">
                         Level 1
                     </button>
+                    <!-- PERUBAHAN: Target Bintang baru -->
                     <button id="start-level-2" data-level="2" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-yellow-500 border-yellow-700 rounded-xl py-4">
                         Level 2 <span id="unlock-2" class="text-sm">(Kunci: 30⭐)</span>
                     </button>
@@ -101,7 +103,7 @@
                         Level 3 <span id="unlock-3" class="text-sm">(Kunci: 50⭐)</span>
                     </button>
                     <button id="start-level-4" data-level="4" class="level-btn btn-3d w-64 text-xl font-bold text-white bg-red-500 border-red-700 rounded-xl py-4">
-                        Level 4 <span id="unlock-4" class="text-sm">(Kunci: 100⭐)</span>
+                        Level 4 <span id="unlock-4" class="text-sm">(Kunci: 75⭐)</span>
                     </button>
                 </div>
             </div>
@@ -133,7 +135,7 @@
             </div>
            
             <!-- Area Jawaban (Slot Huruf) -->
-            <div id="answer-container" class="flex justify-center items-center gap-2 md:gap-4 mb-8 min-h-[80px]">
+            <div id="answer-container" class="flex justify-center items-center flex-wrap gap-2 md:gap-4 mb-8 min-h-[80px]">
                 <!-- Slot jawaban akan dibuat oleh JavaScript -->
             </div>
 
@@ -144,7 +146,7 @@
         </div>
         
         <!-- Notifikasi Umpan Balik (Feedback) -->
-        <div id="feedback-container" class="hidden absolute inset-0 bg-black/30 z-50 items-center justify-center">
+        <div id="feedback-container" class="hidden absolute inset-0 bg-black/30 z-50 items-center justify-center pointer-events-none">
             <div id="feedback-box" class="text-center text-white p-8">
                 <p id="feedback-message" class="text-6xl font-bold mb-4"></p>
                 <p id="feedback-stars" class="text-4xl"></p>
@@ -171,15 +173,16 @@
         const feedbackMessage = document.getElementById('feedback-message');
         const feedbackStars = document.getElementById('feedback-stars');
         
-        // --- PERUBAHAN: Database Kata-kata dengan 4 Level ---
+        // --- PERUBAHAN: Database Kata-kata direvisi total ---
         const wordList = {
-            1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'AYAM', 'TOPI', 'BAJU', 'PAGI', 'IBU', 'AYAH', 'NAGA', 'DUKU'],
-            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'INTERNET'],
-            3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'HARIMAU', 'SEPEDA', 'KERETA', 'JENDELA', 'LEMARI', 'PUKULI', 'PANJATI', 'AMBILKAN', 'BERIKAN', 'SEMANGKA'],
-            4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU']
+            1: ['BUKU', 'MEJA', 'BOLA', 'RODA', 'KAKI', 'SAPI', 'KUDA', 'TOPI', 'BAJU', 'PAGI', 'NAGA', 'DUKU', 'LIMA', 'GIGI', 'FOTO', 'KADO'], // Hanya KVKV atau KVKV
+            '1_advanced': ['KELAPA', 'LEMARI', 'SEPEDA', 'KERETA', 'TOMAT', 'MELON'], // Kata 3 suku kata untuk level 1
+            2: ['SEKOLAH', 'KOMPUTER', 'TELEPON', 'DOKTER', 'PASAR', 'BANTAL', 'PENSIL', 'KAPAL', 'HOTEL', 'KAMUS', 'ROBOT', 'TRAKTOR', 'HELMET', 'SUPERMARKET'], // Akhiran Konsonan
+            3: ['MAKANAN', 'MINUMAN', 'MAINAN', 'BACAAN', 'LUKISAN', 'TANAMAN', 'JALANAN', 'LOMPATAN', 'TARIKAN', 'PEGANGAN'], // Pola dengan imbuhan -an
+            4: ['KUCING', 'PISANG', 'BURUNG', 'SENANG', 'TERBANG', 'MENYANYI', 'NYAMUK', 'BUNGA', 'TELINGA', 'CANGKUL', 'PANGGUNG', 'SIANG', 'SAYANG', 'MENYIRAM', 'MENYAPU', 'TANDING'] // Pola NG dan NY
         };
 
-        const distractorLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const distractorLetters = "AEIOUKMBLPRSTG"; // Huruf pengecoh yang sering muncul
         
         // State Permainan
         let currentLevel = 1;
@@ -189,9 +192,12 @@
         let startTime = 0;
         const TIME_LIMIT = 30;
 
+        // PERUBAHAN: Sistem untuk melacak kata yang sudah digunakan
+        let usedWords = { 1: [], 2: [], 3: [], 4: [] };
+
+
         // --- 2. LOGIKA PERMAINAN ---
 
-        // Fungsi untuk memulai level yang dipilih
         function selectLevel(level) {
             currentLevel = level;
             startScreen.classList.add('hidden');
@@ -201,11 +207,27 @@
             nextWord();
         }
         
-        // Fungsi untuk mempersiapkan soal berikutnya
         function nextWord() {
-            // Pilih kata acak dari level saat ini
-            const availableWords = wordList[currentLevel];
+            // --- PERUBAHAN: Logika pemilihan kata yang lebih canggih ---
+            let wordPool = [...wordList[currentLevel]];
+            
+            // Jika di level 1 dan bintang >= 15, tambahkan kata 3 suku kata
+            if (currentLevel == 1 && totalStars >= 15) {
+                wordPool.push(...wordList['1_advanced']);
+            }
+
+            // Filter kata yang sudah digunakan
+            let availableWords = wordPool.filter(word => !usedWords[currentLevel].includes(word));
+
+            // Jika semua kata sudah habis, reset daftar kata bekas untuk level ini dan coba lagi
+            if (availableWords.length === 0) {
+                usedWords[currentLevel] = [];
+                availableWords = wordPool.filter(word => !usedWords[currentLevel].includes(word));
+            }
+
             currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+            usedWords[currentLevel].push(currentWord); // Tandai kata sebagai sudah digunakan
+
             
             // Bersihkan area permainan
             answerContainer.innerHTML = '';
@@ -213,7 +235,7 @@
             
             // Buat huruf-huruf pilihan
             let choiceLetters = [...currentWord];
-            const neededDistractors = Math.max(2, Math.floor(currentWord.length / 2)); // Tambah huruf pengecoh
+            const neededDistractors = Math.max(3, Math.floor(currentWord.length / 2));
             while (choiceLetters.length < currentWord.length + neededDistractors) {
                 const randomLetter = distractorLetters[Math.floor(Math.random() * distractorLetters.length)];
                 if (!choiceLetters.includes(randomLetter)) {
@@ -221,36 +243,30 @@
                 }
             }
             
-            // Acak huruf pilihan
             choiceLetters.sort(() => Math.random() - 0.5);
 
-            // Tampilkan slot jawaban dan kartu huruf
             for (let i = 0; i < currentWord.length; i++) {
                 const slot = document.createElement('div');
-                slot.className = 'answer-slot w-16 h-20 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold';
+                slot.className = 'answer-slot w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold';
                 slot.dataset.index = i;
                 answerContainer.appendChild(slot);
             }
 
             choiceLetters.forEach(letter => {
                 const card = document.createElement('button');
-                card.className = 'letter-card btn-3d w-16 h-20 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white cursor-grab';
+                card.className = 'letter-card btn-3d w-14 h-16 md:w-20 md:h-24 rounded-2xl flex items-center justify-center text-4xl font-bold text-white cursor-grab';
                 card.textContent = letter;
                 lettersContainer.appendChild(card);
-                
-                // Tambahkan event listener untuk drag-and-drop
                 makeDraggable(card);
             });
             
-            // Ucapkan kata dan mulai timer
             setTimeout(() => speakWord(currentWord), 500);
             startTimer();
         }
 
-        // Fungsi untuk mengucapkan kata
         function speakWord(word) {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Hentikan suara sebelumnya jika ada
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(word);
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.8;
@@ -260,7 +276,6 @@
             }
         }
         
-        // Fungsi untuk memulai timer
         function startTimer() {
             clearInterval(timerId);
             startTime = Date.now();
@@ -272,7 +287,6 @@
             timerId = setTimeout(handleTimeUp, TIME_LIMIT * 1000);
         }
 
-        // Fungsi yang dijalankan jika waktu habis
         function handleTimeUp() {
             totalStars = Math.max(0, totalStars - 1);
             updateStarDisplay();
@@ -280,7 +294,6 @@
             setTimeout(nextWord, 2000);
         }
         
-        // Fungsi untuk mengecek jawaban
         function checkAnswer() {
             const filledSlots = answerContainer.querySelectorAll('.answer-slot');
             let answeredWord = '';
@@ -294,7 +307,7 @@
             });
 
             if (allSlotsFilled) {
-                 clearInterval(timerId); // Hentikan timer
+                 clearInterval(timerId);
                 if (answeredWord === currentWord) {
                     const timeTaken = (Date.now() - startTime) / 1000;
                     
@@ -303,7 +316,7 @@
                     else if (timeTaken < 12) starsWon = 4;
                     else if (timeTaken < 18) starsWon = 3;
                     else if (timeTaken < 24) starsWon = 2;
-                    else starsWon = 1;
+                    else if (timeTaken < 30) starsWon = 1;
                     
                     totalStars += starsWon;
                     updateStarDisplay();
@@ -336,7 +349,6 @@
 
         function updateStarDisplay() {
             starDisplay.textContent = totalStars;
-            // --- PERUBAHAN: Cek untuk membuka 4 level ---
             const btnLevel2 = document.getElementById('start-level-2');
             const btnLevel3 = document.getElementById('start-level-3');
             const btnLevel4 = document.getElementById('start-level-4');
@@ -344,11 +356,11 @@
             const unlock3 = document.getElementById('unlock-3');
             const unlock4 = document.getElementById('unlock-4');
             
+            // PERUBAHAN: Target Bintang baru
             const starTarget2 = 30;
             const starTarget3 = 50;
-            const starTarget4 = 100;
+            const starTarget4 = 75;
 
-            // Logika untuk Level 2
             if (totalStars >= starTarget2) {
                 btnLevel2.disabled = false;
                 if (unlock2) unlock2.innerHTML = '✅ Terbuka!';
@@ -361,7 +373,6 @@
                 btnLevel2.classList.remove('bg-green-500', 'border-green-700');
             }
             
-            // Logika untuk Level 3
             if (totalStars >= starTarget3) {
                 btnLevel3.disabled = false;
                 if (unlock3) unlock3.innerHTML = '✅ Terbuka!';
@@ -374,7 +385,6 @@
                 btnLevel3.classList.remove('bg-green-500', 'border-green-700');
             }
 
-            // Logika untuk Level 4
             if (totalStars >= starTarget4) {
                 btnLevel4.disabled = false;
                 if (unlock4) unlock4.innerHTML = '✅ Terbuka!';
@@ -388,7 +398,6 @@
             }
         }
         
-        // Fungsi untuk menampilkan notifikasi
         function showFeedback(message, stars) {
             feedbackMessage.textContent = message;
             feedbackStars.innerHTML = stars;
@@ -403,22 +412,37 @@
             }, 1900);
         }
 
-        // Fungsi Drag-and-Drop
+        // --- PERBAIKAN FINAL: Fungsi Drag-and-Drop yang sangat presisi ---
         function makeDraggable(element) {
-            function onPointerDown(e) {
-                if (e.button !== 0) return;
-                element.setPointerCapture(e.pointerId);
+            let shiftX = 0;
+            let shiftY = 0;
 
-                element.style.cursor = 'grabbing';
+            function onPointerDown(e) {
+                if (e.button !== 0 || element.disabled) return;
+                
+                const rect = element.getBoundingClientRect();
+                shiftX = e.clientX - rect.left;
+                shiftY = e.clientY - rect.top;
+
+                element.setPointerCapture(e.pointerId);
+                
                 element.style.position = 'absolute';
                 element.style.zIndex = 1000;
+                element.style.cursor = 'grabbing';
+                element.style.width = `${rect.width}px`;
+                element.style.height = `${rect.height}px`;
+
+                // Pindahkan elemen ke body untuk konteks posisi yang bersih
+                document.body.appendChild(element);
 
                 moveAt(e.pageX, e.pageY);
             }
 
             function moveAt(pageX, pageY) {
-                element.style.left = pageX - element.offsetWidth / 2 + 'px';
-                element.style.top = pageY - element.offsetHeight / 2 + 'px';
+                // Posisikan elemen menggunakan pageX/pageY yang sudah memperhitungkan scroll
+                // dan kurangi dengan offset awal klik mouse
+                element.style.left = pageX - shiftX + 'px';
+                element.style.top = pageY - shiftY + 'px';
             }
 
             function onPointerMove(e) {
@@ -431,39 +455,38 @@
                 if (!element.hasPointerCapture(e.pointerId)) return;
 
                 element.releasePointerCapture(e.pointerId);
-                element.style.cursor = 'grab';
+
+                element.style.visibility = 'hidden';
+                const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+                element.style.visibility = 'visible';
+                
+                // Kembalikan semua style ke awal SEBELUM dipindahkan ke wadah baru
                 element.style.position = 'static';
                 element.style.zIndex = 'auto';
+                element.style.cursor = 'grab';
+                element.style.left = '';
+                element.style.top = '';
+                element.style.width = '';
+                element.style.height = '';
 
-                let droppedOnSlot = null;
-                const allSlots = answerContainer.querySelectorAll('.answer-slot');
-                allSlots.forEach(slot => {
-                    const rect = slot.getBoundingClientRect();
-                    if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) {
-                        if (!slot.hasChildNodes()) {
-                            droppedOnSlot = slot;
-                        }
-                    }
-                });
+                const targetSlot = dropTarget ? dropTarget.closest('.answer-slot') : null;
 
-                if (droppedOnSlot) {
-                    droppedOnSlot.appendChild(element);
-                    element.style.position = 'relative';
-                    element.style.left = 'auto';
-                    element.style.top = 'auto';
-                    element.disabled = true;
-                    droppedOnSlot.classList.add('filled');
+                if (targetSlot && !targetSlot.hasChildNodes()) {
+                    targetSlot.appendChild(element); // Pindahkan ke slot
+                    element.style.position = 'relative'; // Atur posisi di dalam slot
+                    element.disabled = true; 
+                    targetSlot.classList.add('filled');
                     checkAnswer();
                 } else {
-                    lettersContainer.appendChild(element);
+                    lettersContainer.appendChild(element); // Kembalikan ke tempat pilihan
                 }
             }
             
             element.addEventListener('pointerdown', onPointerDown);
             element.addEventListener('pointermove', onPointerMove);
             element.addEventListener('pointerup', onPointerUp);
+            element.ondragstart = () => false;
         }
-
 
         // --- 4. EVENT LISTENERS UTAMA ---
         levelButtons.forEach(button => {
@@ -486,7 +509,6 @@
             updateStarDisplay();
         });
         
-        // Inisialisasi awal saat halaman dimuat
         window.onload = () => {
             updateStarDisplay();
         };
